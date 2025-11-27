@@ -124,6 +124,8 @@ class Article(Base):
     abstract: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     authors: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     doi: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    volume: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    issue: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     
     # Deduplication
     link_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)

@@ -23,6 +23,8 @@ class ParsedArticle:
     authors: Optional[str]
     doi: Optional[str]
     published_date: Optional[datetime]
+    volume: Optional[str] = None
+    issue: Optional[str] = None
 
 
 class FeedParser:
@@ -157,6 +159,12 @@ class FeedParser:
         
         return abstract
 
+    def _extract_volume_issue(self, entry: dict) -> tuple[Optional[str], Optional[str]]:
+        """Extract volume and issue from entry."""
+        volume = entry.get('prism_volume')
+        issue = entry.get('prism_number') or entry.get('prism_issue')
+        return volume, issue
+
     def _parse_feed_content(self, feed_content: str) -> List[ParsedArticle]:
         """Parse feed content and extract articles (CPU-bound task)."""
         articles = []
@@ -195,6 +203,7 @@ class FeedParser:
                 authors = self._extract_authors(entry)
                 doi = self._extract_doi(entry)
                 published_date = self._parse_date(entry)
+                volume, issue = self._extract_volume_issue(entry)
                 
                 articles.append(ParsedArticle(
                     title=title,
@@ -203,6 +212,8 @@ class FeedParser:
                     authors=authors,
                     doi=doi,
                     published_date=published_date,
+                    volume=volume,
+                    issue=issue,
                 ))
                 
             except Exception as e:

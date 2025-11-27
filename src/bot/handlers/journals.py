@@ -274,6 +274,8 @@ class JournalsHandler:
                             authors=parsed.authors,
                             doi=parsed.doi,
                             published_date=parsed.published_date,
+                            volume=parsed.volume,
+                            issue=parsed.issue,
                         )
                     
                     if article and self.tailoring_service:

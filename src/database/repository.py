@@ -242,6 +242,8 @@ class Repository:
         authors: Optional[str] = None,
         doi: Optional[str] = None,
         published_date: Optional[datetime] = None,
+        volume: Optional[str] = None,
+        issue: Optional[str] = None,
     ) -> Optional[Article]:
         """Create a new article if it doesn't exist."""
         link_hash = self.hash_link(link)
@@ -263,6 +265,8 @@ class Repository:
                 authors=authors,
                 doi=doi,
                 published_date=published_date,
+                volume=volume,
+                issue=issue,
             )
             session.add(article)
             await session.commit()

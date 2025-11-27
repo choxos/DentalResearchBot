@@ -205,11 +205,29 @@ class GrokTailoringService:
             
             tailored_content = response.content
             
-            # Prepend Original Title
+            # Build metadata header
+            meta_parts = []
+            
+            # Journal Info
+            journal_info = journal_name
+            if getattr(article, 'volume', None):
+                journal_info += f", Vol {article.volume}"
+            if getattr(article, 'issue', None):
+                journal_info += f", Issue {article.issue}"
+            
             if language == "fa":
-                tailored_content = f"**عنوان مقاله:**\n{article.title}\n\n{tailored_content}"
+                meta_parts.append(f"**عنوان:** {article.title}")
+                if getattr(article, 'authors', None):
+                    meta_parts.append(f"**نویسندگان:** {article.authors}")
+                meta_parts.append(f"**مجله:** {journal_info}")
             else:
-                tailored_content = f"**Original Title:**\n{article.title}\n\n{tailored_content}"
+                meta_parts.append(f"**Title:** {article.title}")
+                if getattr(article, 'authors', None):
+                    meta_parts.append(f"**Authors:** {article.authors}")
+                meta_parts.append(f"**Journal:** {journal_info}")
+            
+            # Prepend header
+            tailored_content = "\n".join(meta_parts) + "\n\n" + tailored_content
             
             # Ensure link is included
             if article.link not in tailored_content:
