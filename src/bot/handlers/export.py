@@ -172,7 +172,13 @@ class ExportHandler:
         
         a {{ color: #2874a6; text-decoration: none; }}
         
-        .header {{ text-align: center; margin-bottom: 2em; border-bottom: 2px solid #eee; padding-bottom: 1em; }}
+        .header {{ 
+            text-align: center; 
+            margin-bottom: 2em; 
+            border-bottom: 2px solid #eee; 
+            padding-bottom: 1em; 
+            direction: ltr;
+        }}
         .footer {{ 
             position: fixed; 
             bottom: 0; 
