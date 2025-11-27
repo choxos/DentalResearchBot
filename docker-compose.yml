@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dentalbot_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dentalbot
+      POSTGRES_PASSWORD: dentalbot_secret
+      POSTGRES_DB: dentalbot_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dentalbot -d dentalbot_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dentalbot_network
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dentalbot_bot
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_DEFAULT_MODEL=${OPENROUTER_DEFAULT_MODEL:-x-ai/grok-4.1-fast:free}
+      - DATABASE_URL=postgresql+asyncpg://dentalbot:dentalbot_secret@postgres:5432/dentalbot_db
+      - ADMIN_USER_IDS=${ADMIN_USER_IDS:-[]}
+      - FEED_CHECK_INTERVAL_HOURS=${FEED_CHECK_INTERVAL_HOURS:-1}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    networks:
+      - dentalbot_network
+
+volumes:
+  postgres_data:
+
+networks:
+  dentalbot_network:
+    driver: bridge
+

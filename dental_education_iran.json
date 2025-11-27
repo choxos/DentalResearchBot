@@ -1,0 +1,77 @@
+{
+  "country": "Iran",
+  "levels": {
+    "Bachelor": {
+      "degree": "Doctor of Dental Surgery (DDS)",
+      "duration": "6 years",
+      "years": {
+        "1": "Basic Science Training",
+        "2": "Basic Science Training",
+        "3": "Pre-clinical Training",
+        "4": "Pre-clinical and Clinical Training",
+        "5": "Clinical Training",
+        "6": "Internship"
+      }
+    },
+    "GeneralDentist": {
+      "degree": "Practicing Dentist",
+      "description": "General dentist after completing DDS"
+    },
+    "Postgraduate": {
+      "fields": {
+        "Orthodontics": {
+          "duration": "4 years",
+          "degree": "MSc"
+        },
+        "Periodontics": {
+          "duration": "4 years",
+          "degree": "MSc"
+        },
+        "Prosthodontics": {
+          "duration": "4 years",
+          "degree": "MSc"
+        },
+        "Endodontics": {
+          "duration": "4 years",
+          "degree": "MSc"
+        },
+        "Oral and Maxillofacial Surgery": {
+          "duration": "6 years",
+          "degree": "MSc"
+        },
+        "Restorative Dentistry": {
+          "duration": "4 years",
+          "degree": "MSc"
+        },
+        "Oral and Maxillofacial Radiology": {
+          "duration": "4 years",
+          "degree": "MSc"
+        },
+        "Oral and Maxillofacial Pathology": {
+          "duration": "4 years",
+          "degree": "MSc"
+        },
+        "Pediatric Dentistry": {
+          "duration": "4 years",
+          "degree": "MSc"
+        },
+        "Oral Medicine": {
+          "duration": "4 years",
+          "degree": "MSc"
+        },
+        "Community Oral Health": {
+          "duration": "5 years",
+          "degree": "PhD"
+        },
+        "Dental Materials": {
+          "duration": "5 years",
+          "degree": "PhD"
+        }
+      }
+    },
+    "Faculty": {
+      "degree": "Professor/Academic",
+      "description": "University faculty members"
+    }
+  }
+}
