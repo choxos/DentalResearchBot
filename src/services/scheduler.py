@@ -166,6 +166,48 @@ class FeedScheduler:
         await self.check_all_feeds()
         return 0
 
+    async def sync_all_feeds_silent(self) -> None:
+        """Fetch and store articles from all feeds without notifying users."""
+        logger.info("Starting silent feed sync...")
+        journals = await self.repository.get_all_journals()
+        
+        total_new = 0
+        for journal in journals:
+            try:
+                # Parse feed
+                articles = await self.feed_parser.parse_from_url(journal.feed_url)
+                
+                for parsed in articles:
+                    # Check existence
+                    if await self.repository.article_exists(parsed.link):
+                        continue
+                    
+                    # Scrape abstract if needed
+                    abstract = parsed.abstract
+                    if journal.needs_scraping and not abstract:
+                        abstract = await self.abstract_scraper.scrape_abstract(parsed.link)
+                    
+                    # Create article
+                    await self.repository.create_article(
+                        journal_id=journal.id,
+                        title=parsed.title,
+                        link=parsed.link,
+                        abstract=abstract,
+                        authors=parsed.authors,
+                        doi=parsed.doi,
+                        published_date=parsed.published_date,
+                        volume=parsed.volume,
+                        issue=parsed.issue,
+                    )
+                    total_new += 1
+                
+                await self.repository.update_journal_last_checked(journal.id)
+                
+            except Exception as e:
+                logger.error(f"Error syncing feed {journal.name}: {e}")
+        
+        logger.info(f"Silent sync complete. Stored {total_new} new articles.")
+
 
 # Global scheduler instance
 _scheduler: Optional[FeedScheduler] = None

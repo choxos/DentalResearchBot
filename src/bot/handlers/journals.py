@@ -26,6 +26,8 @@ TEXTS = {
         "articles_sent": "✅ Sent {count} article(s) from {journal}!",
         "back": "⬅️ Back",
         "done": "✅ Done",
+        "my_subscriptions": "⭐ My Subscriptions",
+        "tap_to_unsubscribe": "📚 *Your Subscriptions*\n\nTap to unsubscribe:",
     },
     "fa": {
         "not_onboarded": "لطفاً ابتدا پروفایلتان را با /start تکمیل کنید",
@@ -41,6 +43,8 @@ TEXTS = {
         "articles_sent": "✅ تعداد {count} مقاله از {journal} ارسال شد.",
         "back": "⬅️ بازگشت",
         "done": "✅ اتمام",
+        "my_subscriptions": "⭐ اشتراک‌های من",
+        "tap_to_unsubscribe": "📚 *اشتراک‌های شما*\n\nبرای لغو اشتراک ضربه بزنید:",
     },
 }
 
@@ -83,6 +87,12 @@ class JournalsHandler:
         categorized = await self.repository.get_journals_by_category()
         
         keyboard = []
+        
+        # Add "My Subscriptions" button
+        keyboard.append([
+            InlineKeyboardButton(self.get_text("my_subscriptions", language), callback_data="jcat:my_subs")
+        ])
+        
         for category in categorized.keys():
             icon = JOURNAL_CATEGORIES.get(category, "📖")
             if language == "fa":
@@ -134,7 +144,42 @@ class JournalsHandler:
         user = await self.repository.get_user(query.from_user.id)
         language = user.language if user else "en"
 
+        if category == "my_subs":
+            await self.show_user_subscriptions(query, language)
+            return
+
         await self._show_journals_in_category(query, category, language)
+
+    async def show_user_subscriptions(self, query, language: str) -> None:
+        """Show user's subscribed journals."""
+        subscriptions = await self.repository.get_user_subscriptions(query.from_user.id)
+        
+        if not subscriptions:
+            await query.answer(self.get_text("no_subscriptions", language), show_alert=True)
+            return
+
+        keyboard = []
+        for journal in subscriptions:
+            # Add Unsubscribe button (❌ Journal Name)
+            # Using a special callback format to know we are in "my_subs" view
+            # journal:ID:1:my_subs (1 means is_subscribed, my_subs is the view)
+            name = journal.name if len(journal.name) <= 30 else journal.name[:27] + "..."
+            keyboard.append([
+                InlineKeyboardButton(
+                    f"❌ {name}",
+                    callback_data=f"journal:{journal.id}:1:my_subs"
+                )
+            ])
+        
+        # Back button
+        keyboard.append([
+            InlineKeyboardButton(self.get_text("back", language), callback_data="jback")
+        ])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        text = self.get_text("tap_to_unsubscribe", language)
+        
+        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode="Markdown")
 
     async def _show_journals_in_category(self, query, category: str, language: str) -> None:
         """Show journals in a specific category."""
@@ -178,11 +223,14 @@ class JournalsHandler:
 
         query = update.callback_query
         data = query.data.split(":")
-        if len(data) != 3:
+        
+        # Data format: journal:ID:is_subscribed[:view_mode]
+        if len(data) < 3:
             return
 
         journal_id = int(data[1])
         is_subscribed = int(data[2])
+        view_mode = data[3] if len(data) > 3 else "category"
         
         user = await self.repository.get_user(query.from_user.id)
         language = user.language if user else "en"
@@ -198,8 +246,12 @@ class JournalsHandler:
             msg = self.get_text("unsubscribed", language).format(journal=journal.name)
             await query.answer(msg)
             
-            # Refresh the category view
-            await self._refresh_category_view(query, journal.category, language)
+            if view_mode == "my_subs":
+                # Refresh the my_subs list
+                await self.show_user_subscriptions(query, language)
+            else:
+                # Refresh the category view
+                await self._refresh_category_view(query, journal.category, language)
         else:
             # Subscribe
             await self.repository.subscribe_user_to_journal(query.from_user.id, journal_id)

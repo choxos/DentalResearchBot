@@ -2,6 +2,7 @@
 
 import logging
 import sys
+import asyncio
 
 from telegram import Update, BotCommand
 from telegram.ext import (
@@ -116,6 +117,10 @@ async def post_init(application: Application) -> None:
     )
     scheduler.start()
     logger.info("Feed scheduler started")
+
+    # Start background feed sync
+    asyncio.create_task(scheduler.sync_all_feeds_silent())
+    logger.info("Started background feed sync")
 
     # Set bot commands
     commands = [
