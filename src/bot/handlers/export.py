@@ -3,6 +3,7 @@
 import io
 import logging
 import os
+import re
 import markdown
 from datetime import datetime
 from typing import Optional
@@ -53,9 +54,6 @@ class ExportHandler:
         # Fallback to message text if DB content missing
         if not content:
             content = query.message.text
-            # If content is from telegram message, it has emojis instead of headers.
-            # WeasyPrint will render emojis fine, but structure might be weak.
-            # It's better to use the DB content whenever possible.
 
         if not content:
             await query.answer("No content to export", show_alert=True)
@@ -84,32 +82,45 @@ class ExportHandler:
         lines = content.split('\n')
         body_lines = []
         
-        # Simple parsing of the header block we added in GrokTailoringService
-        # It puts metadata at the top separated by newlines
+        # Regex patterns for metadata
+        # Matches: **Title:** Value  OR  **Title:** **Value**
+        # Captures the value part, stripping surrounding ** if present
+        title_pattern = re.compile(r'^\*\*(?:Title|عنوان):\*\*\s*(?:(?:\*\*)?(.*?)(?:\*\*)?)?$', re.IGNORECASE)
+        authors_pattern = re.compile(r'^\*\*(?:Authors|نویسندگان):\*\*\s*(?:(?:\*\*)?(.*?)(?:\*\*)?)?$', re.IGNORECASE)
+        journal_pattern = re.compile(r'^\*\*(?:Journal|مجله):\*\*\s*(?:(?:\*\*)?(.*?)(?:\*\*)?)?$', re.IGNORECASE)
+        
         for line in lines:
+            line_stripped = line.strip()
+            
             # Check for Title
-            if line.startswith("**Title:**") or line.startswith("**عنوان:**"):
-                title = line.split(":", 1)[1].strip()
+            title_match = title_pattern.match(line_stripped)
+            if title_match:
+                title = title_match.group(1).strip() if title_match.group(1) else ""
+                continue
+                
             # Check for Authors
-            elif line.startswith("**Authors:**") or line.startswith("**نویسندگان:**"):
-                authors = line.split(":", 1)[1].strip()
+            authors_match = authors_pattern.match(line_stripped)
+            if authors_match:
+                authors = authors_match.group(1).strip() if authors_match.group(1) else ""
+                continue
+                
             # Check for Journal
-            elif line.startswith("**Journal:**") or line.startswith("**مجله:**"):
-                journal = line.split(":", 1)[1].strip()
-            # Skip empty lines at start/metadata block
-            elif not line.strip():
-                if body_lines: # Keep empty lines inside body
+            journal_match = journal_pattern.match(line_stripped)
+            if journal_match:
+                journal = journal_match.group(1).strip() if journal_match.group(1) else ""
+                continue
+            
+            # Skip empty lines at start (likely between metadata)
+            if not line_stripped:
+                if body_lines: # Keep empty lines if we already started body
                     body_lines.append(line)
             else:
-                # If we hit a normal line and we passed metadata, it's body
-                # But wait, Grok output might have headers like # Summary.
-                # We just want to exclude the specific metadata lines we prepended.
+                # Body content
                 body_lines.append(line)
         
         content_body = "\n".join(body_lines).strip()
         
         # Convert MD to HTML
-        # Enable extensions for better formatting
         html_body = markdown.markdown(content_body, extensions=['extra', 'nl2br', 'sane_lists'])
         
         # Logo path
@@ -119,7 +130,6 @@ class ExportHandler:
         
         logo_html = ""
         if os.path.exists(logo_path):
-            # WeasyPrint handles local paths fine
             logo_html = f'<div style="text-align: center;"><img src="{os.path.abspath(logo_path)}" width="150"></div>'
 
         # CSS with Vazirmatn font
@@ -249,7 +259,6 @@ class ExportHandler:
         
         # Generate PDF
         buffer = io.BytesIO()
-        # write_pdf returns None, writes to buffer
         HTML(string=html_content).write_pdf(buffer)
         buffer.seek(0)
         
