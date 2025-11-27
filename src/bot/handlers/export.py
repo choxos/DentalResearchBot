@@ -76,9 +76,41 @@ class ExportHandler:
     async def _export_pdf(self, query, content: str, timestamp: str) -> None:
         """Generate PDF using WeasyPrint (Markdown -> HTML -> PDF)."""
         
+        # Extract metadata
+        title = "Article Summary"
+        authors = ""
+        journal = ""
+        
+        lines = content.split('\n')
+        body_lines = []
+        
+        # Simple parsing of the header block we added in GrokTailoringService
+        # It puts metadata at the top separated by newlines
+        for line in lines:
+            # Check for Title
+            if line.startswith("**Title:**") or line.startswith("**عنوان:**"):
+                title = line.split(":", 1)[1].strip()
+            # Check for Authors
+            elif line.startswith("**Authors:**") or line.startswith("**نویسندگان:**"):
+                authors = line.split(":", 1)[1].strip()
+            # Check for Journal
+            elif line.startswith("**Journal:**") or line.startswith("**مجله:**"):
+                journal = line.split(":", 1)[1].strip()
+            # Skip empty lines at start/metadata block
+            elif not line.strip():
+                if body_lines: # Keep empty lines inside body
+                    body_lines.append(line)
+            else:
+                # If we hit a normal line and we passed metadata, it's body
+                # But wait, Grok output might have headers like # Summary.
+                # We just want to exclude the specific metadata lines we prepended.
+                body_lines.append(line)
+        
+        content_body = "\n".join(body_lines).strip()
+        
         # Convert MD to HTML
         # Enable extensions for better formatting
-        html_body = markdown.markdown(content, extensions=['extra', 'nl2br', 'sane_lists'])
+        html_body = markdown.markdown(content_body, extensions=['extra', 'nl2br', 'sane_lists'])
         
         # Logo path
         logo_path = "dental_research_demystifier_bot_logo.jpg"
@@ -104,6 +136,29 @@ class ExportHandler:
             font-size: 12pt;
             line-height: 1.6;
             margin: 2cm;
+        }}
+        
+        /* Metadata Styles */
+        .meta-title {{
+            font-size: 24pt;
+            color: #1a5276;
+            margin-bottom: 0.2em;
+            font-weight: bold;
+            line-height: 1.2;
+        }}
+        .meta-authors {{
+            font-size: 12pt;
+            color: #555;
+            font-style: italic;
+            margin-bottom: 0.2em;
+        }}
+        .meta-journal {{
+            font-size: 11pt;
+            color: #777;
+            font-weight: bold;
+            margin-bottom: 2em;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 1em;
         }}
         
         h1, h2, h3 {{
@@ -136,7 +191,7 @@ class ExportHandler:
             text-align: right;
         }}
         
-        body.rtl h1, body.rtl h2, body.rtl h3 {{
+        body.rtl h1, body.rtl h2, body.rtl h3, body.rtl .meta-title {{
             text-align: right;
         }}
         
@@ -149,6 +204,13 @@ class ExportHandler:
         is_farsi = any(c in content for c in "آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی")
         body_class = "rtl" if is_farsi else "ltr"
         
+        # Build Metadata HTML
+        meta_html = f'<div class="meta-title">{title}</div>'
+        if authors:
+            meta_html += f'<div class="meta-authors">{authors}</div>'
+        if journal:
+            meta_html += f'<div class="meta-journal">{journal}</div>'
+        
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -159,9 +221,13 @@ class ExportHandler:
         <body class="{body_class}">
             <div class="header">
                 {logo_html}
-                <h1>🦷 DentalResearchBot</h1>
-                <p><a href="https://t.me/dentalresearchbot">t.me/dentalresearchbot</a></p>
-                <p style="font-size: 9pt; color: #666;">Generated: {timestamp.replace('_', ' ')}</p>
+                <p style="font-weight: bold; color: #1a5276; margin: 0;">🦷 DentalResearchBot</p>
+                <p style="font-size: 9pt; margin: 0;"><a href="https://t.me/dentalresearchbot">t.me/dentalresearchbot</a></p>
+                <p style="font-size: 8pt; color: #888; margin-top: 5px;">Generated: {timestamp.replace('_', ' ')}</p>
+            </div>
+            
+            <div class="article-meta">
+                {meta_html}
             </div>
             
             <div class="content">
