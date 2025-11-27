@@ -22,6 +22,15 @@ class ExportHandler:
     def __init__(self, repository: Repository):
         self.repository = repository
 
+    def _sanitize_filename(self, title: str) -> str:
+        """Make title safe for filename."""
+        # Remove invalid chars
+        safe = re.sub(r'[\\/*?:"<>|]', "", title)
+        # Replace spaces with underscores
+        safe = safe.replace(" ", "_")
+        # Limit length to avoid filesystem issues
+        return safe[:50]
+
     async def handle_export_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle export button callbacks."""
         if not update.callback_query:
@@ -95,7 +104,9 @@ class ExportHandler:
             # Check for Title
             title_match = title_pattern.match(line_stripped)
             if title_match:
-                title = title_match.group(1).strip() if title_match.group(1) else ""
+                extracted_title = title_match.group(1).strip() if title_match.group(1) else ""
+                if extracted_title:
+                    title = extracted_title
                 continue
                 
             # Check for Authors
@@ -262,13 +273,29 @@ class ExportHandler:
         HTML(string=html_content).write_pdf(buffer)
         buffer.seek(0)
         
+        # Sanitize filename
+        safe_title = self._sanitize_filename(title)
+        filename = f"{safe_title}_{timestamp}.pdf" if safe_title != "Article_Summary" else f"dental_article_{timestamp}.pdf"
+        
         await query.message.reply_document(
-            document=InputFile(buffer, filename=f"dental_article_{timestamp}.pdf"),
-            caption="📄 PDF exported!",
+            document=InputFile(buffer, filename=filename),
+            caption=f"📄 PDF exported: {title}",
         )
 
     async def _export_markdown(self, query, content: str, timestamp: str) -> None:
         """Generate and send Markdown file."""
+        # Extract title (simple scan)
+        title = "Article Summary"
+        title_pattern = re.compile(r'^\*\*(?:Title|عنوان):\*\*\s*(?:(?:\*\*)?(.*?)(?:\*\*)?)?$', re.IGNORECASE)
+        
+        for line in content.split('\n'):
+            match = title_pattern.match(line.strip())
+            if match:
+                extracted_title = match.group(1).strip() if match.group(1) else ""
+                if extracted_title:
+                    title = extracted_title
+                break
+
         lines = [
             "# DentalResearchBot Article Summary",
             "",
@@ -286,8 +313,12 @@ class ExportHandler:
         md_content = "\n".join(lines)
         buffer = io.BytesIO(md_content.encode('utf-8'))
         buffer.seek(0)
+        
+        # Sanitize filename
+        safe_title = self._sanitize_filename(title)
+        filename = f"{safe_title}_{timestamp}.md" if safe_title != "Article_Summary" else f"dental_article_{timestamp}.md"
 
         await query.message.reply_document(
-            document=InputFile(buffer, filename=f"dental_article_{timestamp}.md"),
-            caption="📝 Markdown exported!",
+            document=InputFile(buffer, filename=filename),
+            caption=f"📝 Markdown exported: {title}",
         )
