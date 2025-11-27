@@ -76,9 +76,9 @@ class JournalsHandler:
             await update.message.reply_text(self.get_text("not_onboarded", language))
             return
 
-        await self._show_categories(update.message, user.language)
+        await self.show_categories(user.language, message=update.message)
 
-    async def _show_categories(self, message, language: str) -> None:
+    async def show_categories(self, language: str, message=None, query=None) -> None:
         """Show journal category selection."""
         categorized = await self.repository.get_journals_by_category()
         
@@ -99,12 +99,24 @@ class JournalsHandler:
         keyboard.append([InlineKeyboardButton(self.get_text("done", language), callback_data="jdone")])
         
         reply_markup = InlineKeyboardMarkup(keyboard)
+        text = self.get_text("select_category", language)
         
-        await message.reply_text(
-            self.get_text("select_category", language),
-            reply_markup=reply_markup,
-            parse_mode="Markdown",
-        )
+        if query:
+            await query.edit_message_text(
+                text,
+                reply_markup=reply_markup,
+                parse_mode="Markdown",
+            )
+        elif message:
+            await message.reply_text(
+                text,
+                reply_markup=reply_markup,
+                parse_mode="Markdown",
+            )
+
+    async def _show_categories(self, message, language: str) -> None:
+        """Deprecated: Use show_categories instead."""
+        await self.show_categories(language, message=message)
 
     async def handle_category_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle category selection callback."""

@@ -211,10 +211,10 @@ class OnboardingHandler:
             onboarding_complete=True,
         )
 
-        await query.edit_message_text(
-            self.get_text("onboarding_complete", language),
-            parse_mode="Markdown",
-        )
+        # Transition directly to Journal Selection
+        from src.bot.handlers.journals import JournalsHandler
+        handler = JournalsHandler(self.repository)
+        await handler.show_categories(language, query=query)
 
     async def handle_settings_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle settings menu callbacks."""
